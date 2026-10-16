@@ -1,1 +1,354 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heavy Artillery ATL | Drop Simulator</title>
+<style>
+:root {
+  --purple: #ad55ff;
+  --cyan: #48e6f1;
+  --bg: #08080b;
+  --panel: #14131a;
+  --muted: #8d8998;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #f5f3fa;
+  font-family: Arial, sans-serif;
+}
+header {
+  text-align: center;
+  padding: 26px 16px 20px;
+  border-bottom: 1px solid #29252f;
+  background: #0b0a0f;
+}
+.logo {
+  color: var(--purple);
+  font-size: clamp(23px, 4vw, 38px);
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+.subtitle { color: var(--cyan); margin-top: 7px; letter-spacing: 2px; font-size: 12px; }
+.tabs {
+  display: flex; gap: 12px; padding: 18px 3%;
+  border-bottom: 1px solid #29252f;
+}
+button, select { font: inherit; }
+.tab, .spin-button, .small-button {
+  cursor: pointer;
+  border: 2px solid var(--purple);
+  border-radius: 8px;
+  background: #30223f;
+  color: #c991ff;
+  padding: 12px 16px;
+  transition: .2s;
+}
+.tab { flex: 1; font-size: 16px; }
+.tab.active { background: var(--purple); color: white; }
+main { width: min(1050px, 94%); margin: 26px auto; }
+h1 { color: var(--purple); text-align: center; font-size: clamp(24px, 4vw, 38px); }
+h2 { color: var(--purple); text-align: center; font-weight: 500; }
+.description { color: var(--cyan); text-align: center; margin: 12px 0 24px; }
+.controls {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; flex-wrap: wrap; margin: 20px 0 30px;
+}
+select {
+  background: #292630; color: #ffe34c;
+  padding: 13px; border: 1px solid #4a4554; border-radius: 8px;
+}
+.spin-button { background: #32213f; min-width: 120px; }
+button:hover { filter: brightness(1.25); }
+button:disabled { opacity: .55; cursor: wait; }
+.track {
+  position: relative; overflow: hidden; height: 190px;
+  border: 1px solid #302b39; border-radius: 24px;
+  background: linear-gradient(110deg, #121117, #1b1721, #121117);
+  padding: 25px 0;
+}
+.track:before, .track:after {
+  content: ""; position: absolute; top: 0; height: 100%;
+  width: 45px; z-index: 2; pointer-events: none;
+}
+.track:before { left: 0; background: linear-gradient(90deg,#14131a,transparent); }
+.track:after { right: 0; background: linear-gradient(270deg,#14131a,transparent); }
+.pointer {
+  position: absolute; z-index: 3; left: 50%; top: 12px;
+  bottom: 12px; width: 4px; transform: translateX(-50%);
+  background: #ffe735; box-shadow: 0 0 12px #ffe735;
+}
+.pointer:before {
+  content: ""; position: absolute; top: 0; left: -6px;
+  border-left: 8px solid transparent; border-right: 8px solid transparent;
+  border-top: 12px solid #ffe735;
+}
+.reel {
+  display: flex; gap: 14px; height: 140px;
+  width: max-content; align-items: stretch;
+  transform: translateX(0);
+}
+.weapon-card {
+  width: 132px; flex-shrink: 0; border: 2px solid var(--tier);
+  border-radius: 12px; background: var(--shade);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-around;
+  padding: 10px 5px; box-shadow: inset 0 0 18px var(--shade);
+}
+.weapon-picture {
+  width: 100%; height: 72px; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 43px; filter: grayscale(.25);
+}
+.weapon-picture img { max-width: 100%; max-height: 70px; object-fit: contain; }
+.weapon-name { font-weight: 800; font-size: 12px; text-align: center; }
+.weapon-stars { font-size: 12px; color: white; }
+.tier-green { --tier:#26d94a; --shade:#073319; }
+.tier-blue { --tier:#168dff; --shade:#082449; }
+.tier-red { --tier:#ff3d45; --shade:#421014; }
+.tier-orange { --tier:#ff9b24; --shade:#46260a; }
+.status { text-align:center; color:#ffe34c; margin:24px 0; min-height:28px; }
+.section { margin-top: 55px; }
+.history {
+  display: grid; grid-template-columns: repeat(auto-fill,minmax(130px,1fr));
+  gap: 12px; margin-top: 20px;
+}
+.history .weapon-card { width: 100%; min-height: 130px; }
+.empty { text-align:center; color:var(--muted); padding:15px; }
+.tiers { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.tier-box { padding:15px 5px; text-align:center; border-radius:8px; background:var(--panel); }
+.tier-box strong { display:block; margin-bottom:6px; }
+.tier-box span { font-size:12px; color:#c1bacb; }
+footer { text-align:center; color:#777180; padding:30px 12px; font-size:12px; }
+@media(max-width:600px) {
+  .tabs { gap:8px; padding:14px 3%; }
+  .tab { font-size:14px; padding:12px 5px; }
+  .track { height:170px; }
+  .reel { height:120px; }
+  .weapon-card { width:112px; }
+  .weapon-picture { height:60px; }
+  .tiers { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">HEAVY ARTILLERY ATL</div>
+  <div class="subtitle">WEAPON DROP SIMULATOR</div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" id="factionTab" onclick="setMode('faction')">Faction Drop</button>
+  <button class="tab" id="drugTab" onclick="setMode('drug')">Drug Drop</button>
+</nav>
+
+<main>
+  <h1 id="pageTitle">Heavy Artillery ATL Faction Drops</h1>
+  <h2>Randomize</h2>
+  <p class="description">Simulate a faction drop spin</p>
+
+  <div class="controls">
+    <label for="tierSelect">Choose Tier:</label>
+    <select id="tierSelect">
+      <option value="1">Tier 1</option>
+      <option value="1.5" selected>Tier 1.5</option>
+      <option value="2">Tier 2</option>
+      <option value="3">Tier 3</option>
+      <option value="4">Tier 4</option>
+    </select>
+    <button class="spin-button" id="spinBtn" onclick="spin()">Spin</button>
+  </div>
+
+  <div class="track" id="track">
+    <div class="pointer"></div>
+    <div class="reel" id="reel"></div>
+  </div>
+  <div class="status" id="status">Your drops will appear here</div>
+
+  <section class="section">
+    <h2>Your Drops</h2>
+    <div class="history" id="history">
+      <p class="empty">No drops yet. Hit Spin to get started.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Weapon Tiers</h2>
+    <p class="description">Heavy Artillery weapon rarity guide</p>
+    <div class="tiers">
+      <div class="tier-box"><strong style="color:#26d94a">★ Common</strong><span>Green tier</span></div>
+      <div class="tier-box"><strong style="color:#168dff">★★ Uncommon</strong><span>Blue tier</span></div>
+      <div class="tier-box"><strong style="color:#ff3d45">★★★ Rare</strong><span>Red tier</span></div>
+      <div class="tier-box"><strong style="color:#ff9b24">★★★★ Legendary</strong><span>Orange tier</span></div>
+    </div>
+  </section>
+</main>
+<footer>HEAVY ARTILLERY ATL · COMMUNITY DROP SIMULATOR</footer>
+
+<script>
+const weapons = {
+  faction: [
+    {name:"Glock 17",tier:"green",stars:"★",min:1,max:4},
+    {name:"M9",tier:"green",stars:"★",min:1,max:4},
+    {name:"Hi-Point",tier:"green",stars:"★",min:1,max:4},
+    {name:"CZ-75",tier:"green",stars:"★★",min:1,max:4},
+    {name:"MAC-10",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"MP5",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"UMP-45",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"M4A1",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"AK-47",tier:"red",stars:"★★★",min:2,max:4},
+    {name:"SCAR-H",tier:"red",stars:"★★★",min:2,max:4},
+    {name:"FAL",tier:"red",stars:"★★★",min:2,max:4},
+    {name:"AUG",tier:"red",stars:"★★★",min:2,max:4},
+    {name:"AWP",tier:"orange",stars:"★★★★",min:3,max:4},
+    {name:"Draco",tier:"orange",stars:"★★★★",min:3,max:4},
+    {name:"RPK",tier:"orange",stars:"★★★★",min:3,max:4},
+    {name:"M249",tier:"orange",stars:"★★★★",min:4,max:4}
+  ],
+  drug: [
+    {name:"Cannabis Pack",tier:"green",stars:"★",min:1,max:4},
+    {name:"Small Package",tier:"green",stars:"★",min:1,max:4},
+    {name:"Premium Pack",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"Sealed Package",tier:"blue",stars:"★★",min:1.5,max:4},
+    {name:"Rare Package",tier:"red",stars:"★★★",min:2,max:4},
+    {name:"Premium Crate",tier:"orange",stars:"★★★★",min:3,max:4}
+  ]
+};
+
+let mode = "faction";
+let busy = false;
+let history = [];
+
+function getPool() {
+  const tier = Number(document.getElementById("tierSelect").value);
+  return weapons[mode].filter(w => tier >= w.min && tier <= w.max);
+}
+
+function card(w) {
+  const el = document.createElement("div");
+  el.className = "weapon-card tier-" + w.tier;
+  const picture = document.createElement("div");
+  picture.className = "weapon-picture";
+  if (w.image) {
+    const img = document.createElement("img");
+    img.src = w.image;
+    img.alt = w.name;
+    picture.appendChild(img);
+  } else {
+    picture.textContent = w.tier === "green" ? "▰" :
+      w.tier === "blue" ? "▰" :
+      w.tier === "red" ? "▰" : "▰";
+    picture.style.fontSize = "48px";
+    picture.style.transform = "rotate(-20deg)";
+  }
+  const name = document.createElement("div");
+  name.className = "weapon-name";
+  name.textContent = w.name;
+  const stars = document.createElement("div");
+  stars.className = "weapon-stars";
+  stars.textContent = w.stars;
+  el.append(picture,name,stars);
+  return el;
+}
+
+function setMode(next) {
+  if (busy) return;
+  mode = next;
+  document.getElementById("factionTab").classList.toggle("active", mode==="faction");
+  document.getElementById("drugTab").classList.toggle("active", mode==="drug");
+  document.getElementById("pageTitle").textContent =
+    "Heavy Artillery ATL " + (mode==="faction" ? "Faction" : "Drug") + " Drops";
+  document.querySelector(".description").textContent =
+    "Simulate a " + mode + " drop spin";
+  document.getElementById("status").textContent = "Ready to spin";
+  renderPreview();
+}
+
+function renderPreview() {
+  const reel = document.getElementById("reel");
+  reel.style.transition = "none";
+  reel.style.transform = "translateX(0)";
+  reel.replaceChildren();
+  const pool = getPool();
+  if (!pool.length) return;
+  for (let i=0; i<12; i++) reel.appendChild(card(pool[i % pool.length]));
+}
+
+function spin() {
+  if (busy) return;
+  const pool = getPool();
+  if (!pool.length) {
+    document.getElementById("status").textContent = "No drops available for this tier.";
+    return;
+  }
+
+  busy = true;
+  const btn = document.getElementById("spinBtn");
+  btn.disabled = true;
+  document.getElementById("status").textContent = "Rolling for your drop...";
+  const reel = document.getElementById("reel");
+  reel.style.transition = "none";
+  reel.style.transform = "translateX(0)";
+  reel.replaceChildren();
+
+  const winner = pool[Math.floor(Math.random() * pool.length)];
+  const items = [];
+  for (let i=0; i<36; i++) {
+    items.push(i===32 ? winner : pool[Math.floor(Math.random()*pool.length)]);
+  }
+  items.forEach(w => reel.appendChild(card(w)));
+
+  const track = document.getElementById("track");
+  const cardWidth = 132;
+  const gap = 14;
+  const winnerIndex = 32;
+  const centerOffset = track.clientWidth / 2;
+  const winnerCenter = winnerIndex * (cardWidth + gap) + cardWidth/2;
+  const endX = centerOffset - winnerCenter;
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    reel.style.transition = "transform 5s cubic-bezier(.12,.75,.08,1)";
+    reel.style.transform = "translateX(" + endX + "px)";
+  }));
+
+  setTimeout(() => {
+    history.unshift({...winner, mode});
+    renderHistory();
+    document.getElementById("status").textContent =
+      "YOU WON: " + winner.name + " · " + winner.tier.toUpperCase();
+    btn.disabled = false;
+    busy = false;
+  }, 5200);
+}
+
+function renderHistory() {
+  const container = document.getElementById("history");
+  container.replaceChildren();
+  if (!history.length) {
+    container.innerHTML = '<p class="empty">No drops yet.</p>';
+    return;
+  }
+  history.forEach(w => {
+    const item = card(w);
+    const tag = document.createElement("div");
+    tag.style.cssText = "font-size:10px;color:#c5b9d2;text-align:center";
+    tag.textContent = w.mode.toUpperCase() + " DROP";
+    item.appendChild(tag);
+    container.appendChild(item);
+  });
+}
+
+document.getElementById("tierSelect").addEventListener("change", () => {
+  if (!busy) {
+    renderPreview();
+    document.getElementById("status").textContent = "Ready to spin";
+  }
+});
+renderPreview();
+</script>
+</body>
+</html>
+
